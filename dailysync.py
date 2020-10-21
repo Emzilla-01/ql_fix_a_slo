@@ -42,18 +42,20 @@ if __name__ == "__main__":
 """
 #!/usr/bin/ python3
 
+from sys import argv
 import subprocess
 import os
-#from multiprocessing import Process, Pool
-import multiprocessing
+#import multiprocessing
+from multiprocessing import Pool
 from concurrent import futures
+from time import sleep
 
 #src = "/mnt/c/users/emmam/documents/git_practice/backup"
 #dest = "/mnt/c/users/emmam/documents/git_practice/backup_backup"
 
 fp_l = list()
 jobs = list()
-#f_delim=r"\"
+
 
 def subproc_wf():
     """
@@ -73,12 +75,19 @@ def fp_name_fixer(source):
     d=source+"_backup"
     return(d)
 
-def subproc_rsync(s,d):
+def subproc_rsync(i):
+    s,d = i[0], i[1]
     """
     calls subprocess to rsync in linux
     """
+    #return(print(" ".join(["rsync", "-arv", s, d])))
     #return(subprocess.call(["rsync", "-arv", s, d]))
-    return(print(" ".join(["rsync", "-arv", s, d])))
+    _args=["rsync", "-arv", s, d]
+#    return(" ".join(_args))
+    return(subprocess.call(_args))
+    
+    
+    
     
 def error_handler(e):
     print("!!!FAIL!!!")
@@ -89,7 +98,6 @@ def error_handler(e):
 
 #error_handler(AssertionError("fail"))
 
-    
 def try_make_dir(dest1):
     if not os.path.exists(dest1):
         print("creating dir '{}'".format(dest1))
@@ -106,17 +114,16 @@ def try_make_dir(dest1):
 #try_make_dir(r"hellooO?!?!?>?")
 
 def mkdir_walk(basedir):
+    joblist=list()
     try:
         # =============================================================================
         # top level backup directory creation
         # =============================================================================
         os.chdir(basedir)
-        top_dest = fp_name_fixer(basedir)
-        print("copying to {}".format(top_dest))
+        os.chdir("..")
+        top_dest = fp_name_fixer(basedir) # top level destination folder
+        print("top_dest: "+top_dest)
         try_make_dir(top_dest)
-        print(top_dest)
-#        basedir
-#        top_dest
         #[(r,d,f) for r, d, f, in os.walk(os.getcwd())]
         # =============================================================================
         # begin walk
@@ -125,40 +132,34 @@ def mkdir_walk(basedir):
             root, dirs, files = _item[0], _item[1], _item[2]
             print("root is now {}".format(root))
             nested_dest = root.replace(basedir , top_dest)
+            print("nested_dest is now: " + nested_dest)
             try_make_dir(nested_dest)
             for files_item in files:
                 _file_source0, _file_dest0 = os.path.join(root, files_item), os.path.join(nested_dest, files_item)
-                subproc_rsync(_file_source0, _file_dest0)
+                joblist.append((_file_source0, _file_dest0))
     except Exception as e:
         error_handler(e)
+    finally:
+        return(joblist)
         
-mkdir_walk(r"C:\Users\emmam\Documents\git_practice\backup")
+#mkdir_walk(r"C:\Users\emmam\Documents\git_practice\backup")
 
 if __name__ == "__main__":
+    jobs=list()
     print("in main dailysync.py")
-    executor=futures.ThreadPoolExecutor() # init executor
-if 0:
-    #####
-    # Create directory if it does not exist
-    #####
-    if not os.path.exists(dest):
-        print("creating dir '{}'".format(dest))
-        try:
-            os.mkdir(dest)
-        except Exception as e:
-            print("e: {}\ntype(e):{}\nInside: {}".format(e,type(e),__name__))
-        for fn in files:
-            print(fn)
-            source_fp = os.path.join(root, fn)
-            target_fp = fp_name_fixer(source_fp)
-            print(target_dir)
-            if not os.path.exists(target_dir):
-                print("creating path: {}".format(target_dir))
-                os.mkdir(target_dir[:-1])
-            #fp_l.append((source_fp, target_fp))
-            ##p = multiprocessing.Process(target=subprocess.call, args = ("rsync", "-arv", source_fp, target_fp))
-            #executor.submit(subproc_rsync([source_fp, target_fp]))
-            ##print(["rsync", "-arv", source_fp, target_fp])
-            ##jobs.append(p)
-            ##p.start()
+    #executor=futures.ThreadPoolExecutor() # init executor
+    argv=["","backup"]
+    jobs = mkdir_walk(argv[1])
+    p = Pool(len(jobs))
+    print("calling p.map for these files:\n"+",\n".join([j[1] for j in jobs])+"...")
+    p.map(subproc_rsync, jobs)
+        
+#    help(p)
+#fp_l.append((source_fp, target_fp))
+##p = multiprocessing.Process(target=subprocess.call, args = ("rsync", "-arv", source_fp, target_fp))
+#executor.submit(subproc_rsync([source_fp, target_fp]))
+##print(["rsync", "-arv", source_fp, target_fp])
+##jobs.append(p)
+##p.start()
+    
 print("done")
