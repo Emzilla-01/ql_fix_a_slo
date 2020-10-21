@@ -1,4 +1,5 @@
-# -*- coding: utf-8 -*-
+#!/usr/bin/python 3
+
 r"""
 requirement inside qwiklabs is to call multiprocessing to call rsync
 
@@ -148,7 +149,7 @@ if __name__ == "__main__":
     jobs=list()
     print("in main dailysync.py")
     #executor=futures.ThreadPoolExecutor() # init executor
-    argv=["","backup"]
+    #argv=["", "~/data"]
     jobs = mkdir_walk(argv[1])
     p = Pool(len(jobs))
     print("calling p.map for these files:\n"+",\n".join([j[1] for j in jobs])+"...")
